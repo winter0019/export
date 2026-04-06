@@ -2,7 +2,8 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Globe, Mail, Lock, ArrowRight } from 'lucide-react';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function LoginView() {
   const navigate = useNavigate();
@@ -35,11 +36,32 @@ export default function LoginView() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      console.log(result.user);
+      const user = result.user;
+      
+      // Check if profile exists
+      const profileSnap = await getDoc(doc(db, 'users', user.uid));
+      if (!profileSnap.exists()) {
+        // Create a default profile if it doesn't exist
+        // We default to 'exporter' but they can change it in their profile
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || 'New User',
+          role: 'exporter', 
+          companyName: 'New Company',
+          verified: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+      
       navigate('/dashboard');
     } catch (err: any) {
       console.error("Google sign-in error:", err);
-      setError(err.message || "Failed to sign in with Google.");
+      if (err.code === 'auth/unauthorized-domain') {
+        setError("This domain is not authorized for Google Sign-In. Please check your Firebase Console settings.");
+      } else {
+        setError(err.message || "Failed to sign in with Google.");
+      }
     } finally {
       setIsLoading(false);
     }

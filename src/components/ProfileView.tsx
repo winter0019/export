@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { User, Mail, Building2, MapPin, Phone, ShieldCheck, Edit3, Globe, Briefcase, CreditCard, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/FirebaseProvider';
@@ -50,12 +51,30 @@ export default function ProfileView() {
     );
   }
 
-  if (!profile) {
+  if (!user) {
     return (
       <div className="text-center py-20 bg-white rounded-3xl border border-neutral-200">
         <User className="w-16 h-16 text-neutral-200 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-neutral-900">Profile not found</h2>
-        <p className="text-neutral-500 text-sm mt-2">Please sign in to view your profile.</p>
+        <h2 className="text-xl font-bold text-neutral-900">Please sign in</h2>
+        <p className="text-neutral-500 text-sm mt-2">You need to be logged in to view your profile.</p>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="text-center py-20 bg-white rounded-3xl border border-neutral-200 shadow-sm">
+        <User className="w-16 h-16 text-neutral-200 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-neutral-900">Complete Your Profile</h2>
+        <p className="text-neutral-500 mt-2">We couldn't find your profile details. Please complete your registration.</p>
+        <div className="mt-6">
+          <Link 
+            to="/register" 
+            className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all"
+          >
+            Complete Registration
+          </Link>
+        </div>
       </div>
     );
   }
@@ -154,21 +173,53 @@ export default function ProfileView() {
                 </div>
               </div>
               {isExporter ? (
-                <div className="flex items-start gap-3">
-                  <Users className="w-4 h-4 text-emerald-600 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-neutral-400 uppercase">Company Size</p>
-                    <p className="text-sm text-neutral-900 capitalize">{profile.companySize}</p>
+                <>
+                  <div className="flex items-start gap-3">
+                    <Users className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400 uppercase">Company Size</p>
+                      <p className="text-sm text-neutral-900 capitalize">{profile.companySize}</p>
+                    </div>
                   </div>
-                </div>
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400 uppercase">Annual Volume</p>
+                      <p className="text-sm text-neutral-900">{profile.annualExportVolume || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400 uppercase">License</p>
+                      <p className="text-sm text-neutral-900">{profile.businessLicense || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="flex items-start gap-3">
-                  <CreditCard className="w-4 h-4 text-emerald-600 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-neutral-400 uppercase">Payment Methods</p>
-                    <p className="text-sm text-neutral-900">{profile.preferredPaymentMethods?.join(', ') || 'Not specified'}</p>
+                <>
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400 uppercase">Payment Methods</p>
+                      <p className="text-sm text-neutral-900">{profile.preferredPaymentMethods?.join(', ') || 'Not specified'}</p>
+                    </div>
                   </div>
-                </div>
+                  <div className="flex items-start gap-3">
+                    <Globe className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400 uppercase">Target Markets</p>
+                      <p className="text-sm text-neutral-900">{profile.targetMarkets?.join(', ') || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Users className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400 uppercase">Sourcing Frequency</p>
+                      <p className="text-sm text-neutral-900 capitalize">{profile.sourcingFrequency || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>

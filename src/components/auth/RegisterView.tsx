@@ -57,8 +57,12 @@ export default function RegisterView() {
     const companySize = formData.get('companySize') as string;
     const certifications = formData.get('certifications') as string;
     const exportExperience = formData.get('exportExperience') as string;
+    const businessLicense = formData.get('businessLicense') as string;
+    const annualExportVolume = formData.get('annualExportVolume') as string;
     const preferredPaymentMethods = formData.get('preferredPaymentMethods') as string;
     const importExperience = formData.get('importExperience') as string;
+    const targetMarkets = formData.get('targetMarkets') as string;
+    const sourcingFrequency = formData.get('sourcingFrequency') as string;
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -81,9 +85,13 @@ export default function RegisterView() {
         profileData.companySize = companySize;
         profileData.certifications = certifications ? certifications.split(',').map(s => s.trim()) : [];
         profileData.exportExperience = exportExperience;
+        profileData.businessLicense = businessLicense;
+        profileData.annualExportVolume = annualExportVolume;
       } else if (role === 'buyer') {
         profileData.preferredPaymentMethods = preferredPaymentMethods ? preferredPaymentMethods.split(',').map(s => s.trim()) : [];
         profileData.importExperience = importExperience;
+        profileData.targetMarkets = targetMarkets ? targetMarkets.split(',').map(s => s.trim()) : [];
+        profileData.sourcingFrequency = sourcingFrequency;
       }
 
       await setDoc(doc(db, 'users', user.uid), profileData);
@@ -268,16 +276,41 @@ export default function RegisterView() {
                       <option value="5+">5+ years</option>
                     </select>
                   </div>
+                  <div>
+                    <label htmlFor="annualExportVolume" className="block text-sm font-bold text-neutral-700">Annual Export Volume</label>
+                    <select
+                      id="annualExportVolume"
+                      name="annualExportVolume"
+                      className="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-neutral-200 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-xl"
+                    >
+                      <option value="&lt; $100k">&lt; $100k</option>
+                      <option value="$100k - $500k">$100k - $500k</option>
+                      <option value="$500k - $1M">$500k - $1M</option>
+                      <option value="$1M+">$1M+</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="certifications" className="block text-sm font-bold text-neutral-700">Certifications (comma separated)</label>
-                  <input
-                    id="certifications"
-                    name="certifications"
-                    type="text"
-                    className="mt-1 appearance-none block w-full px-3 py-2.5 border border-neutral-200 rounded-xl shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm transition-all"
-                    placeholder="ISO 9001, HACCP, NAFDAC"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="businessLicense" className="block text-sm font-bold text-neutral-700">Business License Number</label>
+                    <input
+                      id="businessLicense"
+                      name="businessLicense"
+                      type="text"
+                      className="mt-1 appearance-none block w-full px-3 py-2.5 border border-neutral-200 rounded-xl shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm transition-all"
+                      placeholder="RC-1234567"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="certifications" className="block text-sm font-bold text-neutral-700">Certifications (comma separated)</label>
+                    <input
+                      id="certifications"
+                      name="certifications"
+                      type="text"
+                      className="mt-1 appearance-none block w-full px-3 py-2.5 border border-neutral-200 rounded-xl shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm transition-all"
+                      placeholder="ISO 9001, HACCP, NAFDAC"
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -295,6 +328,31 @@ export default function RegisterView() {
                       <option value="3-5">3-5 years</option>
                       <option value="5+">5+ years</option>
                     </select>
+                  </div>
+                  <div>
+                    <label htmlFor="sourcingFrequency" className="block text-sm font-bold text-neutral-700">Sourcing Frequency</label>
+                    <select
+                      id="sourcingFrequency"
+                      name="sourcingFrequency"
+                      className="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-neutral-200 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-xl"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="as-needed">As Needed</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="targetMarkets" className="block text-sm font-bold text-neutral-700">Target Markets (comma separated)</label>
+                    <input
+                      id="targetMarkets"
+                      name="targetMarkets"
+                      type="text"
+                      className="mt-1 appearance-none block w-full px-3 py-2.5 border border-neutral-200 rounded-xl shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm transition-all"
+                      placeholder="China, EU, USA"
+                    />
                   </div>
                   <div>
                     <label htmlFor="preferredPaymentMethods" className="block text-sm font-bold text-neutral-700">Payment Methods (comma separated)</label>

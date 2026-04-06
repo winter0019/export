@@ -14,9 +14,13 @@ export interface UserProfile {
   companySize?: string;
   certifications?: string[];
   exportExperience?: string;
+  businessLicense?: string;
+  annualExportVolume?: string;
   // Buyer specific
   preferredPaymentMethods?: string[];
   importExperience?: string;
+  targetMarkets?: string[];
+  sourcingFrequency?: string;
 }
 
 export interface Product {

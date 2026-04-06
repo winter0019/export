@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user profile information and roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["exporter", "buyer", "admin"] },
+        "companyName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "location": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "companySize": { "type": "string" },
+        "certifications": { "type": "array", "items": { "type": "string" } },
+        "exportExperience": { "type": "string" },
+        "preferredPaymentMethods": { "type": "array", "items": { "type": "string" } },
+        "importExperience": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "verified"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Agricultural products listed by exporters.",
+      "type": "object",
+      "properties": {
+        "exporterId": { "type": "string" },
+        "exporterName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "unit": { "type": "string" },
+        "minOrderQuantity": { "type": "number" },
+        "availableQuantity": { "type": "number" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "sold_out", "draft"] },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "certifications": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["exporterId", "title", "category", "price", "unit", "status"]
+    },
+    "BuyerRequest": {
+      "title": "Buyer Request",
+      "description": "Sourcing requests posted by buyers.",
+      "type": "object",
+      "properties": {
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "requiredQuantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "targetPrice": { "type": "number" },
+        "preferredLocation": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "fulfilled", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["buyerId", "title", "category", "requiredQuantity", "unit", "status"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "AI-generated matches between requests and products.",
+      "type": "object",
+      "properties": {
+        "buyerRequestId": { "type": "string" },
+        "productId": { "type": "string" },
+        "score": { "type": "number" },
+        "breakdown": {
+          "type": "object",
+          "properties": {
+            "quantity": { "type": "number" },
+            "price": { "type": "number" },
+            "quality": { "type": "number" },
+            "location": { "type": "number" }
+          }
+        },
+        "status": { "type": "string", "enum": ["pending", "contacted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["buyerRequestId", "productId", "score", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Product listing documents."
+    },
+    "/requests/{requestId}": {
+      "schema": "BuyerRequest",
+      "description": "Buyer sourcing request documents."
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "AI match documents."
+    }
+  }
+}

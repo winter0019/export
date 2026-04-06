@@ -1,0 +1,195 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - role: string (required, enum: ['exporter', 'buyer', 'admin'])
+    //   - companyName: string (optional)
+    //   - phoneNumber: string (optional)
+    //   - location: string (optional)
+    //   - verified: bool (required)
+    //   - createdAt: timestamp (required)
+    //   - companySize: string (optional)
+    //   - certifications: list (optional)
+    //   - exportExperience: string (optional)
+    //   - preferredPaymentMethods: list (optional)
+    //   - importExperience: string (optional)
+    //
+    // Collection: products
+    // Document ID: {productId}
+    // Fields:
+    //   - exporterId: string (required)
+    //   - exporterName: string (required)
+    //   - title: string (required, max 100 chars)
+    //   - description: string (required, max 2000 chars)
+    //   - category: string (required)
+    //   - price: number (required, positive)
+    //   - unit: string (required)
+    //   - minOrderQuantity: number (required, positive)
+    //   - availableQuantity: number (required, positive)
+    //   - location: string (required)
+    //   - status: string (required, enum: ['available', 'sold_out', 'draft'])
+    //   - images: list (max 10 items)
+    //   - certifications: list (max 10 items)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: requests
+    // Document ID: {requestId}
+    // Fields:
+    //   - buyerId: string (required)
+    //   - buyerName: string (required)
+    //   - title: string (required, max 100 chars)
+    //   - description: string (required, max 2000 chars)
+    //   - category: string (required)
+    //   - requiredQuantity: number (required, positive)
+    //   - unit: string (required)
+    //   - targetPrice: number (optional, positive)
+    //   - preferredLocation: string (optional)
+    //   - status: string (required, enum: ['open', 'fulfilled', 'closed'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: matches
+    // Document ID: {matchId}
+    // Fields:
+    //   - buyerRequestId: string (required)
+    //   - productId: string (required)
+    //   - score: number (required, 0-100)
+    //   - breakdown: map (required)
+    //   - status: string (required, enum: ['pending', 'contacted', 'rejected'])
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "dangalan20@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role', 'verified', 'createdAt']) &&
+             hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'companyName', 'phoneNumber', 'location', 'verified', 'createdAt', 'companySize', 'certifications', 'exportExperience', 'preferredPaymentMethods', 'importExperience']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['exporter', 'buyer', 'admin'] &&
+             data.verified is bool &&
+             data.createdAt is timestamp &&
+             (!('companySize' in data) || data.companySize is string) &&
+             (!('certifications' in data) || data.certifications is list) &&
+             (!('exportExperience' in data) || data.exportExperience is string) &&
+             (!('preferredPaymentMethods' in data) || data.preferredPaymentMethods is list) &&
+             (!('importExperience' in data) || data.importExperience is string);
+    }
+
+    function isValidProduct(data) {
+      return hasRequiredFields(['exporterId', 'exporterName', 'title', 'description', 'category', 'price', 'unit', 'minOrderQuantity', 'availableQuantity', 'location', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['exporterId', 'exporterName', 'title', 'description', 'category', 'price', 'unit', 'minOrderQuantity', 'availableQuantity', 'location', 'status', 'images', 'certifications', 'createdAt']) &&
+             data.exporterId == request.auth.uid &&
+             data.title is string && data.title.size() <= 100 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.price is number && data.price > 0 &&
+             data.minOrderQuantity is number && data.minOrderQuantity > 0 &&
+             data.availableQuantity is number && data.availableQuantity >= 0 &&
+             data.status in ['available', 'sold_out', 'draft'] &&
+             (!('images' in data) || (data.images is list && data.images.size() <= 10)) &&
+             (!('certifications' in data) || (data.certifications is list && data.certifications.size() <= 10)) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidRequest(data) {
+      return hasRequiredFields(['buyerId', 'buyerName', 'title', 'description', 'category', 'requiredQuantity', 'unit', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['buyerId', 'buyerName', 'title', 'description', 'category', 'requiredQuantity', 'unit', 'targetPrice', 'preferredLocation', 'status', 'createdAt']) &&
+             data.buyerId == request.auth.uid &&
+             data.title is string && data.title.size() <= 100 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.requiredQuantity is number && data.requiredQuantity > 0 &&
+             (!('targetPrice' in data) || (data.targetPrice is number && data.targetPrice > 0)) &&
+             data.status in ['open', 'fulfilled', 'closed'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMatch(data) {
+      return hasRequiredFields(['buyerRequestId', 'productId', 'score', 'breakdown', 'status', 'createdAt']) &&
+             data.score is number && data.score >= 0 && data.score <= 100 &&
+             data.status in ['pending', 'contacted', 'rejected'] &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role != 'admin' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true; // Marketplace is public
+      allow create: if isAuthenticated() && isValidProduct(request.resource.data);
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.exporterId || isAdmin()) && isValidProduct(request.resource.data);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.exporterId || isAdmin());
+    }
+
+    match /requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidRequest(request.resource.data);
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.buyerId || isAdmin()) && isValidRequest(request.resource.data);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.buyerId || isAdmin());
+    }
+
+    match /matches/{matchId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == get(/databases/$(database)/documents/requests/$(resource.data.buyerRequestId)).data.buyerId ||
+        request.auth.uid == get(/databases/$(database)/documents/products/$(resource.data.productId)).data.exporterId ||
+        isAdmin()
+      );
+      // Matches are usually created by system/functions, but for MVP we might allow creation if score is valid
+      allow create: if isAuthenticated() && isValidMatch(request.resource.data);
+      allow update: if isAuthenticated() && isValidMatch(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Globe, Mail, Lock, User, Building2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export default function RegisterView() {
@@ -12,6 +12,37 @@ export default function RegisterView() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [role, setRole] = React.useState<UserRole>('exporter');
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if profile exists
+      const profileSnap = await getDoc(doc(db, 'users', user.uid));
+      if (!profileSnap.exists()) {
+        // Create a default profile if it doesn't exist
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || 'New User',
+          role: role, // Use the currently selected role
+          verified: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+      
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error("Google sign-in error:", err);
+      setError(err.message || "Failed to sign in with Google.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -302,6 +333,29 @@ export default function RegisterView() {
               </button>
             </div>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-200" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-neutral-500">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoading}
+                className="w-full inline-flex justify-center py-2.5 px-4 border border-neutral-200 rounded-xl bg-white text-sm font-bold text-neutral-700 hover:bg-neutral-50 transition-all shadow-sm disabled:opacity-50"
+              >
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-2" />
+                Google
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

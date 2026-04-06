@@ -29,12 +29,13 @@ export default function LoginView() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      console.log(result.user);
       navigate('/dashboard');
     } catch (err: any) {
       console.error("Google sign-in error:", err);
@@ -162,7 +163,7 @@ export default function LoginView() {
             <div className="mt-6 grid grid-cols-1 gap-3">
               <button
                 type="button"
-                onClick={handleGoogleSignIn}
+                onClick={handleGoogleLogin}
                 disabled={isLoading}
                 className="w-full inline-flex justify-center py-2.5 px-4 border border-neutral-200 rounded-xl bg-white text-sm font-bold text-neutral-700 hover:bg-neutral-50 transition-all shadow-sm disabled:opacity-50"
               >

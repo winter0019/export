@@ -1,10 +1,10 @@
 {
-  "projectId": "weeklyreport-a150a",
-  "appId": "1:225162027576:web:af50215005426f2fcebccd",
-  "apiKey": "AIzaSyAJS3_Z7jkB_gqm054bxSn_r2AFJ_WcMjw",
-  "authDomain": "weeklyreport-a150a.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-1150d7ab-f7e1-4e6b-aeda-af13a28750eb",
-  "storageBucket": "weeklyreport-a150a.firebasestorage.app",
-  "messagingSenderId": "225162027576",
-  "measurementId": ""
+  "projectId": "mytor-b6345",
+  "appId": "1:1097344102399:web:6915e0010a12c16bd5c1ca",
+  "apiKey": "AIzaSyDDCN7mBSYM60hVDAR_zQKvarQ2spq7Tpk",
+  "authDomain": "mytor-b6345.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "mytor-b6345.firebasestorage.app",
+  "messagingSenderId": "1097344102399",
+  "measurementId": "G-KHJHVRWQ62"
 }

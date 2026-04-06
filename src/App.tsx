@@ -8,6 +8,8 @@ import MatchesView from './components/matches/MatchesView';
 import LoginView from './components/auth/LoginView';
 import RegisterView from './components/auth/RegisterView';
 import ProfileView from './components/ProfileView';
+import ProductForm from './components/products/ProductForm';
+import BuyerRequestForm from './components/marketplace/BuyerRequestForm';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages (to be created)
@@ -64,6 +66,8 @@ export default function App() {
           <Route path="/dashboard" element={<Layout><DashboardView /></Layout>} />
           <Route path="/matches" element={<Layout><MatchesView /></Layout>} />
           <Route path="/profile" element={<Layout><ProfileView /></Layout>} />
+          <Route path="/products/new" element={<Layout><ProductForm /></Layout>} />
+          <Route path="/sourcing-requests/new" element={<Layout><BuyerRequestForm /></Layout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

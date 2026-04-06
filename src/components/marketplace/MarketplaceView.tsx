@@ -5,76 +5,50 @@ import { Product } from '@/types';
 import { PRODUCT_CATEGORIES, NIGERIAN_STATES } from '@/constants';
 import { cn } from '@/lib/utils';
 
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    exporterId: 'exp1',
-    exporterName: 'Adebayo Exports Ltd',
-    title: 'Premium Dried Hibiscus Flowers',
-    description: 'High-quality dried hibiscus flowers, moisture < 10%, deep red color, suitable for tea and food coloring.',
-    category: 'Hibiscus',
-    price: 1200,
-    unit: 'MT',
-    minOrderQuantity: 10,
-    availableQuantity: 100,
-    qualityGrade: 'Grade A',
-    certifications: ['ISO 9001', 'NAFDAC'],
-    images: ['https://picsum.photos/seed/hibiscus/400/300'],
-    location: 'Kano, Nigeria',
-    status: 'available',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    exporterId: 'exp2',
-    exporterName: 'Lagos Cocoa Traders',
-    title: 'Fermented Cocoa Beans',
-    description: 'Main crop fermented cocoa beans, well-dried, high fat content, perfect for premium chocolate production.',
-    category: 'Cocoa',
-    price: 2800,
-    unit: 'MT',
-    minOrderQuantity: 5,
-    availableQuantity: 50,
-    qualityGrade: 'Premium',
-    certifications: ['Fairtrade'],
-    images: ['https://picsum.photos/seed/cocoa/400/300'],
-    location: 'Ondo, Nigeria',
-    status: 'available',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    exporterId: 'exp3',
-    exporterName: 'Northern Soy Connect',
-    title: 'Non-GMO Yellow Soybeans',
-    description: 'Organic non-GMO yellow soybeans, high protein content, cleaned and sorted for export.',
-    category: 'Soybean',
-    price: 850,
-    unit: 'MT',
-    minOrderQuantity: 20,
-    availableQuantity: 500,
-    qualityGrade: 'Standard',
-    certifications: [],
-    images: ['https://picsum.photos/seed/soybean/400/300'],
-    location: 'Kaduna, Nigeria',
-    status: 'available',
-    createdAt: new Date().toISOString()
-  }
-];
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 export default function MarketplaceView() {
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
   const [selectedState, setSelectedState] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
 
-  const filteredProducts = MOCK_PRODUCTS.filter(product => {
+  React.useEffect(() => {
+    const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const productList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Product[];
+      setProducts(productList);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching products:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
     const matchesState = !selectedState || product.location.includes(selectedState);
     return matchesSearch && matchesCategory && matchesState;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -172,7 +146,11 @@ export default function MarketplaceView() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.length > 0 ? (
           filteredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              onViewDetails={() => setSelectedProduct(product)}
+            />
           ))
         ) : (
           <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-neutral-300">
@@ -184,6 +162,99 @@ export default function MarketplaceView() {
           </div>
         )}
       </div>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in zoom-in-95">
+            <div className="md:w-1/2 h-64 md:h-auto relative bg-neutral-100">
+              <img
+                src={selectedProduct.images[0]}
+                alt={selectedProduct.title}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+              <button 
+                onClick={() => setSelectedProduct(null)}
+                className="absolute top-4 left-4 p-2 bg-white/80 hover:bg-white rounded-full text-neutral-900 md:hidden"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="md:w-1/2 p-8 overflow-y-auto">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded uppercase tracking-wider mb-2 inline-block">
+                    {selectedProduct.category}
+                  </span>
+                  <h2 className="text-2xl font-bold text-neutral-900">{selectedProduct.title}</h2>
+                </div>
+                <button 
+                  onClick={() => setSelectedProduct(null)}
+                  className="p-2 hover:bg-neutral-100 rounded-full text-neutral-400 hidden md:block"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex items-center text-emerald-700 font-bold text-3xl mb-6">
+                <span className="text-xl mr-1">$</span>
+                {selectedProduct.price}
+                <span className="text-sm text-neutral-500 font-normal ml-2">per {selectedProduct.unit}</span>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 mb-2 uppercase tracking-wider">Description</h3>
+                  <p className="text-neutral-600 text-sm leading-relaxed">{selectedProduct.description}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-neutral-50 rounded-xl">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase">Min Order</p>
+                    <p className="text-sm font-bold text-neutral-900">{selectedProduct.minOrderQuantity} {selectedProduct.unit}</p>
+                  </div>
+                  <div className="p-3 bg-neutral-50 rounded-xl">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase">Location</p>
+                    <p className="text-sm font-bold text-neutral-900">{selectedProduct.location}</p>
+                  </div>
+                  <div className="p-3 bg-neutral-50 rounded-xl">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase">Exporter</p>
+                    <p className="text-sm font-bold text-neutral-900">{selectedProduct.exporterName}</p>
+                  </div>
+                  <div className="p-3 bg-neutral-50 rounded-xl">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase">Status</p>
+                    <p className="text-sm font-bold text-emerald-600 capitalize">{selectedProduct.status}</p>
+                  </div>
+                </div>
+
+                {selectedProduct.certifications.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 mb-2 uppercase tracking-wider">Certifications</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProduct.certifications.map((cert, i) => (
+                        <span key={i} className="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full border border-amber-100 flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          {cert}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-6 flex gap-3">
+                  <button className="flex-grow py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-100 transition-all">
+                    Contact Exporter
+                  </button>
+                  <button className="px-6 py-4 bg-white border border-neutral-200 text-neutral-600 font-bold rounded-2xl hover:bg-neutral-50 transition-all">
+                    Inquiry
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

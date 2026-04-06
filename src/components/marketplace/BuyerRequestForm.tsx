@@ -6,6 +6,11 @@ import { ShoppingBag, DollarSign, MapPin, Tag, FileText, Plus, X, Brain } from '
 import { PRODUCT_CATEGORIES, UNITS, CHINESE_PROVINCES } from '@/constants';
 import { cn } from '@/lib/utils';
 
+import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirebase } from '@/FirebaseProvider';
+import { useNavigate } from 'react-router-dom';
+
 const requestSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
@@ -20,6 +25,8 @@ const requestSchema = z.object({
 type RequestFormValues = z.infer<typeof requestSchema>;
 
 export default function BuyerRequestForm() {
+  const { user, profile } = useFirebase();
+  const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
     defaultValues: {
@@ -29,10 +36,23 @@ export default function BuyerRequestForm() {
   });
 
   const onSubmit = async (data: RequestFormValues) => {
-    console.log('Submitting sourcing request:', data);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    alert('Sourcing request posted! Our AI matching engine is now scanning for suppliers.');
+    if (!user) {
+      alert('Please sign in to post a request');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'sourcing_requests'), {
+        ...data,
+        buyerId: user.uid,
+        buyerName: profile?.companyName || user.displayName || 'Anonymous Buyer',
+        status: 'open',
+        createdAt: serverTimestamp(),
+      });
+      navigate('/dashboard');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'sourcing_requests');
+    }
   };
 
   return (

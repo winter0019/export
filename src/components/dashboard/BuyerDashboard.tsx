@@ -2,11 +2,28 @@ import React from 'react';
 import { Search, ShoppingBag, Heart, Clock, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useFirebase } from '@/FirebaseProvider';
+import { Link } from 'react-router-dom';
+
 export default function BuyerDashboard() {
+  const { user } = useFirebase();
+  const [requestCount, setRequestCount] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'sourcing_requests'), where('buyerId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setRequestCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   const stats = [
-    { name: 'Active Requests', value: '4', icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { name: 'Saved Suppliers', value: '18', icon: Heart, color: 'text-red-600', bg: 'bg-red-50' },
-    { name: 'Open Inquiries', value: '7', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { name: 'Active Requests', value: requestCount.toString(), icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { name: 'Saved Suppliers', value: '0', icon: Heart, color: 'text-red-600', bg: 'bg-red-50' },
+    { name: 'Open Inquiries', value: '0', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
   ];
 
   const recentActivities = [
@@ -22,10 +39,13 @@ export default function BuyerDashboard() {
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Buyer Dashboard</h1>
           <p className="text-neutral-500 text-sm">Track your sourcing requests and manage supplier relationships.</p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-100 transition-all">
+        <Link 
+          to="/sourcing-requests/new"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-100 transition-all"
+        >
           <Plus className="w-5 h-5" />
           Post Sourcing Request
-        </button>
+        </Link>
       </div>
 
       {/* Stats Grid */}
@@ -80,9 +100,12 @@ export default function BuyerDashboard() {
             <p className="text-emerald-900/80 text-sm mb-4">
               Look for the gold badge to find suppliers with verified export licenses and quality certifications.
             </p>
-            <button className="w-full py-2 bg-emerald-950 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors">
+            <Link 
+              to="/marketplace"
+              className="w-full py-2 bg-emerald-950 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center"
+            >
               Browse Verified Suppliers
-            </button>
+            </Link>
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">

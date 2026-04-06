@@ -3,8 +3,44 @@ import { User, Mail, Building2, MapPin, Phone, ShieldCheck, Edit3, Globe, Briefc
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/FirebaseProvider';
 
+import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { Plus, X } from 'lucide-react';
+
 export default function ProfileView() {
-  const { profile, loading } = useFirebase();
+  const { user, profile, loading } = useFirebase();
+  const [isEditingCerts, setIsEditingCerts] = React.useState(false);
+  const [newCert, setNewCert] = React.useState('');
+  const [isUpdating, setIsUpdating] = React.useState(false);
+
+  const handleAddCert = async () => {
+    if (!user || !newCert.trim()) return;
+    setIsUpdating(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        certifications: arrayUnion(newCert.trim())
+      });
+      setNewCert('');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRemoveCert = async (cert: string) => {
+    if (!user) return;
+    setIsUpdating(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        certifications: arrayRemove(cert)
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -164,18 +200,61 @@ export default function ProfileView() {
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
-            <h3 className="font-bold text-neutral-900 mb-4">Certifications & Licenses</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-neutral-900">Certifications & Licenses</h3>
+              {isExporter && (
+                <button 
+                  onClick={() => setIsEditingCerts(!isEditingCerts)}
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+                >
+                  {isEditingCerts ? 'Done' : 'Manage Certifications'}
+                </button>
+              )}
+            </div>
+
+            {isEditingCerts && (
+              <div className="mb-6 flex gap-2">
+                <input
+                  type="text"
+                  value={newCert}
+                  onChange={(e) => setNewCert(e.target.value)}
+                  placeholder="Enter certification name..."
+                  className="flex-grow px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCert()}
+                />
+                <button
+                  onClick={handleAddCert}
+                  disabled={isUpdating || !newCert.trim()}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                >
+                  {isUpdating ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Add
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {profile.certifications && profile.certifications.length > 0 ? (
                 profile.certifications.map((cert, i) => (
-                  <div key={i} className="flex items-center gap-3 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-emerald-600 shadow-sm">
-                      <ShieldCheck className="w-6 h-6" />
+                  <div key={i} className="group flex items-center justify-between p-4 bg-neutral-50 rounded-xl border border-neutral-100 hover:border-emerald-200 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-emerald-600 shadow-sm">
+                        <ShieldCheck className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-neutral-900">{cert}</p>
+                        <p className="text-[10px] text-neutral-500">Verified Certification</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-neutral-900">{cert}</p>
-                      <p className="text-[10px] text-neutral-500">Verified Certification</p>
-                    </div>
+                    {isEditingCerts && (
+                      <button 
+                        onClick={() => handleRemoveCert(cert)}
+                        disabled={isUpdating}
+                        className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))
               ) : (

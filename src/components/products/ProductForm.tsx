@@ -6,6 +6,11 @@ import { Package, DollarSign, MapPin, Tag, FileText, Image as ImageIcon, Plus, X
 import { PRODUCT_CATEGORIES, UNITS, NIGERIAN_STATES } from '@/constants';
 import { cn } from '@/lib/utils';
 
+import { auth, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirebase } from '@/FirebaseProvider';
+import { useNavigate } from 'react-router-dom';
+
 const productSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
@@ -20,9 +25,12 @@ const productSchema = z.object({
 type ProductFormValues = z.infer<typeof productSchema>;
 
 export default function ProductForm() {
+  const { user, profile } = useFirebase();
+  const navigate = useNavigate();
   const [images, setImages] = React.useState<string[]>([]);
   const [certifications, setCertifications] = React.useState<string[]>([]);
   const [newCert, setNewCert] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -34,10 +42,30 @@ export default function ProductForm() {
   });
 
   const onSubmit = async (data: ProductFormValues) => {
-    console.log('Submitting product:', { ...data, images, certifications });
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    alert('Product listed successfully!');
+    if (!user || !profile) {
+      setError("You must be logged in to list a product.");
+      return;
+    }
+
+    try {
+      setError(null);
+      const productData = {
+        ...data,
+        exporterId: user.uid,
+        exporterName: profile.companyName || profile.displayName,
+        images: images.length > 0 ? images : [`https://picsum.photos/seed/${data.category}/800/600`],
+        certifications,
+        status: 'available',
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, 'products'), productData);
+      alert('Product listed successfully!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error("Error adding product:", err);
+      handleFirestoreError(err, OperationType.CREATE, 'products');
+    }
   };
 
   const addCertification = () => {

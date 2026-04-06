@@ -1,12 +1,29 @@
 import React from 'react';
 import { Plus, Package, TrendingUp, Users, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useFirebase } from '@/FirebaseProvider';
 
 export default function ExporterDashboard() {
+  const { user } = useFirebase();
+  const [productCount, setProductCount] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'products'), where('exporterId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setProductCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   const stats = [
-    { name: 'Active Listings', value: '12', icon: Package, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { name: 'Total Inquiries', value: '48', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { name: 'Match Rate', value: '85%', icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { name: 'Active Listings', value: productCount.toString(), icon: Package, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { name: 'Total Inquiries', value: '0', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { name: 'Match Rate', value: '0%', icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   const recentActivities = [
@@ -22,10 +39,13 @@ export default function ExporterDashboard() {
           <h1 className="text-2xl font-bold text-neutral-900">Exporter Dashboard</h1>
           <p className="text-neutral-500 text-sm">Manage your products and track your export performance.</p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-100 transition-all">
+        <Link 
+          to="/products/new"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-100 transition-all"
+        >
           <Plus className="w-5 h-5" />
           Add New Product
-        </button>
+        </Link>
       </div>
 
       {/* Stats Grid */}
@@ -80,9 +100,12 @@ export default function ExporterDashboard() {
             <p className="text-emerald-100 text-sm mb-4">
               Exporters with verified quality certifications get 3x more inquiries from Chinese buyers.
             </p>
-            <button className="w-full py-2 bg-emerald-800 hover:bg-emerald-700 rounded-lg text-xs font-bold transition-colors">
+            <Link 
+              to="/profile"
+              className="w-full py-2 bg-emerald-800 hover:bg-emerald-700 rounded-lg text-xs font-bold transition-colors flex items-center justify-center"
+            >
               Upload Certifications
-            </button>
+            </Link>
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">

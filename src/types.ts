@@ -21,6 +21,7 @@ export interface UserProfile {
   importExperience?: string;
   targetMarkets?: string[];
   sourcingFrequency?: string;
+  about?: string;
 }
 
 export interface Product {

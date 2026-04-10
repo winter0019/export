@@ -11,8 +11,80 @@ import { Plus, X } from 'lucide-react';
 export default function ProfileView() {
   const { user, profile, loading } = useFirebase();
   const [isEditingCerts, setIsEditingCerts] = React.useState(false);
+  const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [newCert, setNewCert] = React.useState('');
   const [isUpdating, setIsUpdating] = React.useState(false);
+
+  // Form state
+  const [formData, setFormData] = React.useState({
+    displayName: '',
+    companyName: '',
+    phoneNumber: '',
+    location: '',
+    companySize: '',
+    exportExperience: '',
+    importExperience: '',
+    annualExportVolume: '',
+    businessLicense: '',
+    preferredPaymentMethods: '',
+    targetMarkets: '',
+    sourcingFrequency: '',
+    about: ''
+  });
+
+  React.useEffect(() => {
+    if (profile) {
+      setFormData({
+        displayName: profile.displayName || '',
+        companyName: profile.companyName || '',
+        phoneNumber: profile.phoneNumber || '',
+        location: profile.location || '',
+        companySize: profile.companySize || '',
+        exportExperience: profile.exportExperience || '',
+        importExperience: profile.importExperience || '',
+        annualExportVolume: profile.annualExportVolume || '',
+        businessLicense: profile.businessLicense || '',
+        preferredPaymentMethods: profile.preferredPaymentMethods?.join(', ') || '',
+        targetMarkets: profile.targetMarkets?.join(', ') || '',
+        sourcingFrequency: profile.sourcingFrequency || '',
+        about: profile.about || ''
+      });
+    }
+  }, [profile]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsUpdating(true);
+    try {
+      const updateData: any = {
+        displayName: formData.displayName,
+        companyName: formData.companyName,
+        phoneNumber: formData.phoneNumber,
+        location: formData.location,
+        about: formData.about
+      };
+
+      if (profile?.role === 'exporter') {
+        updateData.companySize = formData.companySize;
+        updateData.exportExperience = formData.exportExperience;
+        updateData.annualExportVolume = formData.annualExportVolume;
+        updateData.businessLicense = formData.businessLicense;
+      } else {
+        updateData.importExperience = formData.importExperience;
+        updateData.sourcingFrequency = formData.sourcingFrequency;
+        updateData.preferredPaymentMethods = formData.preferredPaymentMethods.split(',').map(s => s.trim()).filter(Boolean);
+        updateData.targetMarkets = formData.targetMarkets.split(',').map(s => s.trim()).filter(Boolean);
+      }
+
+      await updateDoc(doc(db, 'users', user.uid), updateData);
+      setIsEditingProfile(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleAddCert = async () => {
     if (!user || !newCert.trim()) return;
@@ -94,7 +166,10 @@ export default function ProfileView() {
             </div>
           </div>
           <div className="absolute bottom-4 right-8">
-            <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg backdrop-blur-md border border-white/20 transition-all flex items-center gap-2">
+            <button 
+              onClick={() => setIsEditingProfile(true)}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg backdrop-blur-md border border-white/20 transition-all flex items-center gap-2"
+            >
               <Edit3 className="w-3 h-3" />
               Edit Profile
             </button>
@@ -243,10 +318,7 @@ export default function ProfileView() {
           <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
             <h3 className="font-bold text-neutral-900 mb-4">About the Company</h3>
             <p className="text-neutral-600 text-sm leading-relaxed">
-              Adebayo Agricultural Exports Nigeria Ltd is a leading supplier of high-quality agricultural commodities 
-              from Northern Nigeria. We specialize in dried hibiscus flowers, soybeans, and ginger. 
-              With over 10 years of experience in the export market, we ensure that all our products 
-              meet international quality standards and are delivered on time.
+              {profile.about || "No description provided yet. Click 'Edit Profile' to add one."}
             </p>
           </div>
 
@@ -315,6 +387,191 @@ export default function ProfileView() {
           </div>
         </div>
       </div>
+      {/* Edit Profile Modal */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-neutral-200">
+            <div className="sticky top-0 bg-white border-b border-neutral-100 px-8 py-6 flex items-center justify-between z-10">
+              <h2 className="text-xl font-bold text-neutral-900">Edit Profile</h2>
+              <button 
+                onClick={() => setIsEditingProfile(false)}
+                className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveProfile} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.displayName}
+                    onChange={(e) => setFormData({...formData, displayName: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Company Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.companyName}
+                    onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {isExporter ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-neutral-100">
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Company Size</label>
+                    <select
+                      value={formData.companySize}
+                      onChange={(e) => setFormData({...formData, companySize: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="small">Small (1-10 employees)</option>
+                      <option value="medium">Medium (11-50 employees)</option>
+                      <option value="large">Large (50+ employees)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Export Experience</label>
+                    <select
+                      value={formData.exportExperience}
+                      onChange={(e) => setFormData({...formData, exportExperience: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="0-2">0-2 years</option>
+                      <option value="3-5">3-5 years</option>
+                      <option value="5+">5+ years</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Annual Export Volume</label>
+                    <select
+                      value={formData.annualExportVolume}
+                      onChange={(e) => setFormData({...formData, annualExportVolume: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="&lt; $100k">&lt; $100k</option>
+                      <option value="$100k - $500k">$100k - $500k</option>
+                      <option value="$500k - $1M">$500k - $1M</option>
+                      <option value="$1M+">$1M+</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Business License</label>
+                    <input
+                      type="text"
+                      value={formData.businessLicense}
+                      onChange={(e) => setFormData({...formData, businessLicense: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-neutral-100">
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Import Experience</label>
+                    <select
+                      value={formData.importExperience}
+                      onChange={(e) => setFormData({...formData, importExperience: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="0-2">0-2 years</option>
+                      <option value="3-5">3-5 years</option>
+                      <option value="5+">5+ years</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Sourcing Frequency</label>
+                    <select
+                      value={formData.sourcingFrequency}
+                      onChange={(e) => setFormData({...formData, sourcingFrequency: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="as-needed">As Needed</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Preferred Payment Methods (comma separated)</label>
+                    <input
+                      type="text"
+                      value={formData.preferredPaymentMethods}
+                      onChange={(e) => setFormData({...formData, preferredPaymentMethods: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Target Markets (comma separated)</label>
+                    <input
+                      type="text"
+                      value={formData.targetMarkets}
+                      onChange={(e) => setFormData({...formData, targetMarkets: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-6 border-t border-neutral-100">
+                <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">About the Company</label>
+                <textarea
+                  rows={4}
+                  value={formData.about}
+                  onChange={(e) => setFormData({...formData, about: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  placeholder="Tell us about your company..."
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  className="flex-1 py-3 border border-neutral-200 text-neutral-600 font-bold rounded-xl hover:bg-neutral-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isUpdating && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
